@@ -1,0 +1,123 @@
+# ───────────── LOG FILES ─────────────
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ───────────── NODE & BUILD ─────────────
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# ───────────── VENV / PYTHON / CACHE ─────────────
+venv/
+env/
+.ai_env/
+*.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+server/node_modules/
+server/venv/
+server/.venv/
+server/__pycache__/
+server/.env/
+# ───────────── JSON FILES ─────────────
+.json
+
+# ───────────── DOTENV & CONFIG ─────────────
+.env
+*.env
+
+# ───────────── OS & EDITORS ─────────────
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ───────────── COMPILED EXTENSIONS ─────────────
+*.so
+
+# ───────────── EGG / DIST ─────────────
+*.egg
+*.egg-info/
+node_modules/
+venv/
+.env
+.json
+
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+env/
+.ai_env/
+*.env/
+.env/
+*.venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Compiled C extensions
+*.so
+
+# Package files
+*.egg
+*.egg-info/
+dist/
+build/
+
+# dotenv environment variables
+.env
