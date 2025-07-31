@@ -24,6 +24,10 @@ class PitchRequest(BaseModel):
     target_audience: Optional[str] = "general investors"
     industry: Optional[str] = None
     funding_stage: Optional[str] = "seed"
+    presentation_style: Optional[str] = "balanced"
+    business_model: Optional[str] = None
+    competitor_context: Optional[str] = None
+    request_id: Optional[str] = None
 
 class PitchResponse(BaseModel):
     deck: str
@@ -52,71 +56,116 @@ async def generate_pitch(pitch_request: PitchRequest):
         if MOCK_MODE:
             logger.info("🎭 Using mock mode - generating sample pitch deck")
             
-            # Create dynamic mock content based on the idea
+            # Enhanced dynamic mock content with more variation
+            import random
+            import hashlib
+            
+            # Create consistent but varied responses based on idea
+            idea_hash = hashlib.md5(idea.encode()).hexdigest()[:8]
+            random.seed(int(idea_hash, 16))
+            
+            # More varied presentation styles
+            mock_styles = [
+                {"tone": "analytical and data-driven", "metrics_focus": "ROI and efficiency"},
+                {"tone": "visionary and inspiring", "metrics_focus": "impact and growth"},
+                {"tone": "practical and execution-focused", "metrics_focus": "scalability and operations"},
+                {"tone": "technology-forward", "metrics_focus": "innovation and disruption"}
+            ]
+            
+            style = random.choice(mock_styles)
+            
+            # Determine industry context and customize content with more variety
             idea_lower = idea.lower()
             
-            # Determine industry context and customize content
-            if any(word in idea_lower for word in ['food', 'delivery', 'restaurant', 'meal', 'kitchen']):
-                industry_context = "food & delivery"
-                market_size = "$150B food service market"
-                solution_tech = "Smart logistics and recommendation engine"
-                problem = "• Food delivery is slow, expensive, and unreliable\n• 45% of orders arrive late or incorrect\n• Limited options for dietary restrictions\n• High fees burden both customers and restaurants"
-                business_model = "• Commission from restaurants: 15-25% per order\n• Delivery fees: $2-5 per order + surge pricing\n• Subscription model: $9.99/month for free delivery\n• Advertising revenue from featured restaurants"
+            if any(word in idea_lower for word in ['food', 'delivery', 'restaurant', 'meal', 'kitchen', 'dining']):
+                industries = [
+                    {"name": "food delivery", "market": "$150B global food delivery", "tech": "AI-powered logistics and demand prediction", 
+                     "problem": "• 47% of food orders arrive late due to inefficient routing\n• Average delivery costs 25% higher than necessary\n• Food waste increases by 15% with current logistics\n• Limited real-time visibility for customers",
+                     "model": "• Commission from restaurants: 12-18% per order\n• Dynamic delivery fees: $1.99-6.99 based on demand\n• Premium subscription: $14.99/month for priority delivery\n• White-label platform licensing: $50K+ annually"},
+                    {"name": "sustainable food tech", "market": "$280B sustainable food", "tech": "Blockchain supply chain and carbon tracking",
+                     "problem": "• 40% of consumers want sustainable food options but can't find them\n• Food industry accounts for 24% of global emissions\n• Supply chain transparency lacking in 73% of food products\n• Premium for sustainable options averages 31%",
+                     "model": "• Marketplace commission: 8-15% on sustainable products\n• Carbon offset services: $2-5 per order\n• B2B sustainability consulting: $25K-100K contracts\n• Data analytics and reporting: $500-2K monthly subscriptions"}
+                ]
+                industry_context = random.choice(industries)
                 
-            elif any(word in idea_lower for word in ['health', 'fitness', 'wellness', 'medical', 'exercise']):
-                industry_context = "health & wellness"
-                market_size = "$280B healthcare market"
-                solution_tech = "Data-driven health optimization platform"
-                problem = "• 73% of people struggle to maintain fitness routines\n• Lack of personalized health guidance\n• Expensive personal trainers and nutritionists\n• Poor tracking of health metrics and progress"
-                business_model = "• Subscription tiers: Basic ($4.99), Premium ($14.99), Pro ($29.99)\n• Corporate wellness programs: $5-15 per employee/month\n• Wearable device partnerships and data licensing\n• In-app purchases for specialized programs"
+            elif any(word in idea_lower for word in ['health', 'fitness', 'wellness', 'medical', 'exercise', 'therapy']):
+                industries = [
+                    {"name": "digital health", "market": "$659B digital health", "tech": "AI-driven health insights and IoT integration",
+                     "problem": "• 68% of people struggle to maintain healthy habits consistently\n• Healthcare costs rising 5% annually due to preventable conditions\n• Limited access to personalized health guidance for 2.3B people\n• Mental health support shortage affects 1 in 4 adults",
+                     "model": "• Subscription tiers: Basic ($9.99), Premium ($24.99), Family ($39.99)\n• Corporate wellness: $8-25 per employee monthly\n• Insurance partnerships: $15-45 per member annually\n• Telehealth sessions: $75-150 per consultation"},
+                    {"name": "fitness technology", "market": "$96B fitness technology", "tech": "Computer vision and biometric analysis",
+                     "problem": "• 84% of gym memberships go unused after 5 months\n• Personal trainer costs average $70/session, limiting accessibility\n• Injury rates increase 23% due to improper form\n• Motivation drops 67% without personalized feedback",
+                     "model": "• App subscriptions: $12.99-29.99 monthly tiers\n• Equipment sales and partnerships: 20-35% margins\n• Corporate fitness programs: $15-50 per employee\n• Certification and training courses: $199-999 per program"}
+                ]
+                industry_context = random.choice(industries)
                 
-            elif any(word in idea_lower for word in ['education', 'learning', 'student', 'school', 'course', 'teach']):
-                industry_context = "education technology"
-                market_size = "$75B education technology market"
-                solution_tech = "Intelligent learning and matching platform"
-                problem = "• Traditional education methods are outdated and ineffective\n• 67% of students struggle to find relevant learning resources\n• High cost of quality education creates barriers\n• Lack of personalized learning paths"
-                business_model = "• Course fees: $99-499 per course\n• Subscription model: $29.99/month for unlimited access\n• Corporate training contracts: $10K-50K annually\n• Certification and placement fees"
-                
-            elif any(word in idea_lower for word in ['crypto', 'trading', 'bitcoin', 'blockchain', 'finance']):
-                industry_context = "fintech & trading"
-                market_size = "$180B cryptocurrency market"
-                solution_tech = "AI-powered trading algorithms and risk management"
-                problem = "• 80% of crypto traders lose money due to poor timing\n• Complex trading interfaces intimidate new users\n• Lack of automated risk management tools\n• Emotional trading leads to significant losses"
-                business_model = "• Trading fees: 0.1-0.5% per transaction\n• Premium features: $49.99/month subscription\n• Copy-trading commissions: 10% of profits\n• API access for institutional clients"
+            elif any(word in idea_lower for word in ['education', 'learning', 'student', 'school', 'course', 'teach', 'training']):
+                industries = [
+                    {"name": "education technology", "market": "$377B global education", "tech": "Adaptive learning AI and personalized curriculum",
+                     "problem": "• 65% of students learn differently than traditional methods accommodate\n• Teacher-to-student ratios worsen globally (1:24 average)\n• Skills gap costs economy $1.2T annually\n• Remote learning engagement drops 40% without personalization",
+                     "model": "• Course sales: $99-499 per course with 70% margins\n• Subscription platform: $19.99-49.99 monthly\n• Enterprise training: $50K-200K annual contracts\n• Certification and accreditation: $299-999 per certificate"},
+                    {"name": "professional development", "market": "$156B corporate training", "tech": "Microlearning platform with skill assessment",
+                     "problem": "• 76% of employees want more learning opportunities\n• Companies lose $62B annually to skills gaps\n• Traditional training has 13% retention rate\n• Career progression stagnates for 58% of knowledge workers",
+                     "model": "• Individual subscriptions: $29.99-79.99 monthly\n• Corporate licenses: $25-100 per employee annually\n• Custom content development: $10K-50K per module\n• Career coaching services: $150-300 per session"}
+                ]
+                industry_context = random.choice(industries)
                 
             else:
-                industry_context = "emerging technology"
-                market_size = "$50B+ addressable market"
-                solution_tech = "Innovative technology platform"
-                problem = "• Current market solutions are fragmented and inefficient\n• 68% dissatisfaction with existing alternatives\n• High costs and poor user experience\n• Lack of modern, user-friendly solutions"
-                business_model = "• Subscription model: $19.99/month for premium features\n• Transaction fees: 3-5% per successful transaction\n• Enterprise partnerships: $25K+ annual contracts\n• Freemium model with paid upgrades"
+                # Generic technology/innovation
+                industries = [
+                    {"name": "emerging technology", "market": "$75B+ emerging tech", "tech": "Next-generation platform with smart automation",
+                     "problem": "• Current solutions are fragmented across 5+ different platforms\n• 73% user dissatisfaction with existing alternatives\n• Manual processes cost businesses 15-30% efficiency\n• Integration complexity increases project timelines by 40%",
+                     "model": "• SaaS subscriptions: $49-199 monthly per user\n• Enterprise licenses: $50K-250K annually\n• Professional services: $150-300 hourly\n• API usage fees: $0.01-0.10 per transaction"},
+                    {"name": "digital transformation", "market": "$521B digital transformation", "tech": "Cloud-native platform with AI optimization",
+                     "problem": "• 89% of companies struggle with digital transformation\n• Legacy systems cost 60% more to maintain\n• Data silos prevent 45% of strategic initiatives\n• Customer expectations exceed current capabilities by 2.5x",
+                     "model": "• Platform subscriptions: $99-499 per organization monthly\n• Implementation services: $25K-100K per project\n• Ongoing support: $5K-20K monthly retainers\n• Training and certification: $1K-5K per person"}
+                ]
+                industry_context = random.choice(industries)
+            
+            # Varied funding amounts and use cases
+            funding_scenarios = [
+                {"amount": "$500K", "runway": "18 months", "priorities": "Product development (50%), Marketing (30%), Team (20%)"},
+                {"amount": "$750K", "runway": "24 months", "priorities": "Engineering (40%), Customer acquisition (35%), Operations (25%)"},
+                {"amount": "$1.2M", "runway": "30 months", "priorities": "Team expansion (45%), Technology (30%), Market expansion (25%)"}
+            ]
+            
+            funding = random.choice(funding_scenarios)
+            
+            # Generate varied milestones
+            milestone_sets = [
+                ["10K active users by month 12", "$750K ARR by month 18", "Break-even by month 24"],
+                ["5K paying customers by month 10", "50% month-over-month growth", "Series A readiness by month 20"],
+                ["Market expansion to 3 cities", "Enterprise partnerships signed", "1M+ in committed revenue"]
+            ]
+            
+            milestones = random.choice(milestone_sets)
             
             mock_deck = f"""
-**SLIDE 1: PROBLEM**
-{problem}
+**SLIDE 1: PROBLEM** ({style["tone"]} approach)
+{industry_context["problem"]}
 
 **SLIDE 2: SOLUTION**
-• {solution_tech} designed specifically for this use case
-• Addresses key user pain points through innovative approach
-• Leverages modern technology stack for superior user experience
-• Scalable solution with competitive advantages
+• {industry_context["tech"]} designed for {style["metrics_focus"]}
+• Addresses critical market inefficiencies through innovative technology
+• Leverages modern architecture for superior performance and user experience
+• Built for scale with sustainable competitive advantages
 
 **SLIDE 3: MARKET OPPORTUNITY**
-• {market_size} with 12% annual growth
-• Target demographic represents 15M+ potential users
-• Early adopter segment shows strong demand signals
-• Market timing is optimal for this type of solution
+• {industry_context["market"]} with 8-15% annual growth trajectory
+• Target segment represents 12M+ addressable users in core markets
+• Market timing optimal with increased demand for digital solutions
+• Early mover advantage in rapidly expanding {industry_context["name"]} sector
 
-**SLIDE 4: BUSINESS MODEL**
-{business_model}
+**SLIDE 4: BUSINESS MODEL** (optimized for {style["metrics_focus"]})
+{industry_context["model"]}
 
 **SLIDE 5: CALL TO ACTION**
-• Seeking $750K seed funding for 18-month runway
-• Use of funds: Product development (45%), Marketing (35%), Team (20%)
-• Target milestones: 5K users by month 12, $500K ARR by month 18
-• Looking for strategic investors with {industry_context} expertise
+• Seeking {funding["amount"]} for {funding["runway"]} runway
+• Use of funds: {funding["priorities"]}
+• Key milestones: {', '.join(milestones)}
+• Looking for strategic investors with {industry_context["name"]} experience
 
-*Mock pitch deck generated for: "{idea}"*
+*Dynamic mock pitch deck generated for: "{idea}" using {style["tone"]} presentation style*
             """
             return PitchResponse(
                 deck=mock_deck.strip(),
@@ -125,42 +174,160 @@ async def generate_pitch(pitch_request: PitchRequest):
             )
 
         logger.info("🤖 Using real OpenAI API to generate pitch deck")
-        prompt = f"""
-        You are an experienced startup advisor and pitch deck expert who has helped hundreds of startups raise funding.
         
-        Create a comprehensive, investor-ready pitch deck for the following startup idea. Structure it as 5 detailed slides:
+        # Generate dynamic context and variations
+        import random
+        import hashlib
+        
+        # Create a unique seed based on the idea AND request parameters to ensure variety
+        seed_string = f"{idea}{pitch_request.presentation_style}{pitch_request.business_model}{pitch_request.competitor_context}"
+        idea_hash = hashlib.md5(seed_string.encode()).hexdigest()[:8]
+        random.seed(int(idea_hash, 16))
+        
+        # Map presentation styles to specific approaches
+        style_mappings = {
+            "balanced": {"approach": "well-rounded and comprehensive", "focus": "balanced growth metrics"},
+            "data-driven": {"approach": "analytical and metrics-focused", "focus": "ROI and performance indicators"},
+            "storytelling": {"approach": "narrative-driven and emotionally compelling", "focus": "vision and impact"},
+            "technology-focused": {"approach": "innovation and technical excellence", "focus": "competitive moats and IP"},
+            "market-opportunity": {"approach": "market disruption and timing", "focus": "market capture and scale"},
+            "problem-solving": {"approach": "solution-oriented and practical", "focus": "problem resolution and value creation"}
+        }
+        
+        selected_style = style_mappings.get(pitch_request.presentation_style, style_mappings["balanced"])
+        
+        # Dynamic elements for more varied responses
+        presentation_styles = [
+            "data-driven and analytical",
+            "storytelling with emotional appeal", 
+            "problem-solving focused",
+            "market opportunity driven",
+            "technology innovation centered"
+        ]
+        
+        # Use user-selected style or pick from available options
+        if pitch_request.presentation_style and pitch_request.presentation_style != "balanced":
+            presentation_style = selected_style["approach"]
+            metrics_focus = selected_style["focus"]
+        else:
+            presentation_style = random.choice(presentation_styles)
+            metrics_focus = random.choice(["user engagement", "revenue growth", "market penetration", "operational efficiency"])
+        
+        # Enhanced industry detection and context
+        industry_contexts = {
+            "fintech": ["financial inclusion", "payment efficiency", "risk management", "digital banking", "investment optimization"],
+            "healthtech": ["patient outcomes", "healthcare accessibility", "medical innovation", "wellness optimization", "care coordination"],
+            "edtech": ["learning effectiveness", "educational equity", "skill development", "knowledge accessibility", "student engagement"],
+            "foodtech": ["food security", "nutritional optimization", "supply chain efficiency", "culinary innovation", "sustainability"],
+            "retail": ["customer experience", "inventory optimization", "omnichannel integration", "personalization", "supply chain"],
+            "default": ["user experience", "market efficiency", "social impact", "technological advancement", "customer satisfaction"]
+        }
+        
+        industry_contexts = {
+            "fintech": ["financial inclusion", "payment efficiency", "risk management", "digital banking"],
+            "healthtech": ["patient outcomes", "healthcare accessibility", "medical innovation", "wellness optimization"],
+            "edtech": ["learning effectiveness", "educational equity", "skill development", "knowledge accessibility"],
+            "foodtech": ["food security", "nutritional optimization", "supply chain efficiency", "culinary innovation"],
+            "default": ["user experience", "market efficiency", "social impact", "technological advancement"]
+        }
+        
+        # Detect industry from idea or use provided industry
+        detected_industry = pitch_request.industry or "default"
+        if not pitch_request.industry:
+            idea_lower = idea.lower()
+            for industry, _ in industry_contexts.items():
+                if industry != "default" and industry.replace("tech", "") in idea_lower:
+                    detected_industry = industry
+                    break
+        
+        focus_areas = industry_contexts.get(detected_industry, industry_contexts["default"])
+        presentation_style = presentation_style
+        primary_focus = random.choice(focus_areas)
+        secondary_focus = random.choice([f for f in focus_areas if f != primary_focus])
+        
+        # Business model context
+        business_model_context = ""
+        if pitch_request.business_model:
+            model_descriptions = {
+                "subscription": "recurring revenue model with predictable cash flow",
+                "marketplace": "platform connecting buyers and sellers with network effects",
+                "freemium": "viral growth model with premium feature conversion",
+                "transaction": "scalable transaction-based revenue with growing volume",
+                "advertising": "user engagement monetization through targeted advertising",
+                "enterprise": "high-value B2B sales with strong customer relationships",
+                "ecommerce": "direct-to-consumer sales with inventory management"
+            }
+            business_model_context = f"Focus on {model_descriptions.get(pitch_request.business_model, 'innovative revenue model')}. "
+        
+        # Competitor context
+        competitor_context = ""
+        if pitch_request.competitor_context:
+            competitor_context = f"Position strategically against {pitch_request.competitor_context} by highlighting unique differentiators. "
+        
+        # Dynamic funding stage context
+        funding_contexts = {
+            "idea": {"amount": "$50K-$250K", "runway": "12-18 months", "focus": "product development and market validation"},
+            "pre-seed": {"amount": "$250K-$750K", "runway": "18-24 months", "focus": "team building and initial traction"},
+            "seed": {"amount": "$750K-$3M", "runway": "24-36 months", "focus": "market expansion and scaling"},
+            "series-a": {"amount": "$3M-$15M", "runway": "36-48 months", "focus": "rapid growth and market leadership"},
+            "series-b": {"amount": "$15M-$50M", "runway": "48+ months", "focus": "international expansion and category dominance"},
+            "later-stage": {"amount": "$50M+", "runway": "60+ months", "focus": "market consolidation and IPO preparation"}
+        }
+        
+        funding_context = funding_contexts.get(pitch_request.funding_stage, funding_contexts["seed"])
+        
+        prompt = f"""
+        You are an experienced startup advisor with expertise in {detected_industry} companies, known for creating {presentation_style} pitch presentations. 
+        You've helped over 200 startups raise funding, with particular strength in {primary_focus} and {secondary_focus}.
+        
+        {business_model_context}{competitor_context}Create a comprehensive, investor-ready pitch deck for the following startup idea. Use a {presentation_style} approach and structure it as 5 detailed slides:
 
         **SLIDE 1: PROBLEM**
-        - Clearly define the pain point or market gap
-        - Include statistics or market evidence
-        - Make it relatable and urgent
+        - Frame the problem through the lens of {primary_focus}
+        - Include specific market statistics and real-world evidence
+        - Quantify the pain point with concrete numbers
+        - Make it urgent and relatable to {pitch_request.target_audience}
+        {f"- Position against known competitors: {pitch_request.competitor_context}" if pitch_request.competitor_context else ""}
 
         **SLIDE 2: SOLUTION**
-        - Present your unique solution approach
-        - Highlight key differentiators
-        - Explain why this solution is better than alternatives
+        - Present your unique approach emphasizing {secondary_focus}
+        - Highlight 3-4 key differentiators that set this apart
+        - Explain the "why now" factor - timing and market readiness
+        - Connect solution directly to the quantified problem
+        {f"- Design for {business_model_context}" if business_model_context else ""}
 
         **SLIDE 3: MARKET OPPORTUNITY**
-        - Define Total Addressable Market (TAM)
-        - Identify target customer segments
-        - Show market trends and growth potential
+        - Define TAM/SAM/SOM with {detected_industry} market context
+        - Identify specific customer segments and beachhead market
+        - Show market trends supporting {primary_focus}
+        - Include growth projections and market drivers focused on {metrics_focus}
 
         **SLIDE 4: BUSINESS MODEL**
-        - Explain how you'll make money
-        - Outline key revenue streams
-        - Include basic unit economics if applicable
+        - Design revenue model optimized for {pitch_request.funding_stage} stage company
+        {f"- Focus specifically on {pitch_request.business_model} revenue model" if pitch_request.business_model else "- Outline multiple revenue streams with realistic projections"}
+        - Include unit economics showing path to profitability
+        - Address scalability and margin improvement over time
+        - Emphasize {metrics_focus} as key success metrics
 
         **SLIDE 5: CALL TO ACTION**
-        - Specify funding requirements
-        - Outline key milestones and use of funds
-        - Present compelling next steps for investors
+        - Request {funding_context["amount"]} for {funding_context["runway"]} runway
+        - Focus use of funds on {funding_context["focus"]}
+        - Set 3-4 specific milestones aligned with next funding round
+        - Present compelling risk-adjusted returns for {pitch_request.target_audience}
+        - Emphasize {presentation_style} value proposition
 
-        Startup Idea: {idea}
-        Target Audience: {pitch_request.target_audience}
-        Industry: {pitch_request.industry or "Not specified"}
-        Funding Stage: {pitch_request.funding_stage}
+        **Context:**
+        - Startup Idea: {idea}
+        - Target Audience: {pitch_request.target_audience}
+        - Industry Focus: {detected_industry}
+        - Funding Stage: {pitch_request.funding_stage}
+        - Presentation Style: {presentation_style}
+        {f"- Business Model: {pitch_request.business_model}" if pitch_request.business_model else ""}
+        {f"- Competitive Context: {pitch_request.competitor_context}" if pitch_request.competitor_context else ""}
 
-        Make the content professional, data-driven, and compelling. Use bullet points and clear formatting.
+        Make the content professional, data-driven, and compelling. Use bullet points, specific numbers, and compelling narrative. 
+        Ensure each slide builds logically to the next and tells a cohesive story focused on {primary_focus}.
+        Vary your language and approach to ensure this pitch deck feels fresh and unique.
         """
 
         response = client.chat.completions.create(
@@ -168,12 +335,15 @@ async def generate_pitch(pitch_request: PitchRequest):
             messages=[
                 {
                     "role": "system", 
-                    "content": "You are a startup advisor and pitch deck expert with deep knowledge of what investors look for in successful pitches."
+                    "content": f"You are a top-tier startup advisor specializing in {detected_industry} companies with a {presentation_style} approach. You understand what makes {pitch_request.target_audience} excited about investing in {pitch_request.funding_stage} stage companies."
                 },
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1500,  # Reduced to save quota
-            temperature=0.7
+            max_tokens=1800,
+            temperature=0.8,  # Increased for more creativity
+            top_p=0.9,       # Added for more diverse outputs
+            frequency_penalty=0.3,  # Reduce repetition
+            presence_penalty=0.2    # Encourage new topics
         )
 
         result = response.choices[0].message.content
@@ -336,67 +506,143 @@ async def generate_detailed_pitch(pitch_request: PitchRequest):
 
         logger.info("🤖 Using real OpenAI API to generate detailed pitch deck")
 
-        prompt = f"""
-        You are an experienced startup advisor creating a comprehensive 10-slide investor pitch deck.
+        # Enhanced dynamic context generation for detailed decks
+        import random
+        import hashlib
         
-        Create a detailed, professional pitch deck with the following structure:
+        # Create consistent but varied responses based on idea
+        idea_hash = hashlib.md5(idea.encode()).hexdigest()[:8]
+        random.seed(int(idea_hash, 16))
+        
+        # More sophisticated presentation approaches for detailed decks
+        detailed_approaches = [
+            {"style": "venture capital focused", "emphasis": "scalability and market capture"},
+            {"style": "product-led growth", "emphasis": "user acquisition and retention"},
+            {"style": "technology innovation", "emphasis": "competitive moats and IP"},
+            {"style": "market disruption", "emphasis": "transformation and timing"},
+            {"style": "sustainable business", "emphasis": "long-term value creation"}
+        ]
+        
+        approach = random.choice(detailed_approaches)
+        
+        # Industry-specific metrics and KPIs
+        industry_metrics = {
+            "fintech": ["CAC payback period", "AUM growth", "transaction volume", "regulatory compliance score"],
+            "healthtech": ["patient outcomes", "clinical validation", "provider adoption", "cost savings"],
+            "edtech": ["learner engagement", "completion rates", "skill acquisition", "teacher satisfaction"],
+            "foodtech": ["order frequency", "delivery efficiency", "supplier satisfaction", "waste reduction"],
+            "default": ["user engagement", "revenue per user", "market penetration", "customer satisfaction"]
+        }
+        
+        # Detect industry
+        detected_industry = pitch_request.industry or "default"
+        if not pitch_request.industry:
+            idea_lower = idea.lower()
+            for industry, _ in industry_metrics.items():
+                if industry != "default" and industry.replace("tech", "") in idea_lower:
+                    detected_industry = industry
+                    break
+        
+        key_metrics = industry_metrics.get(detected_industry, industry_metrics["default"])
+        primary_metric = random.choice(key_metrics)
+        secondary_metrics = [m for m in key_metrics if m != primary_metric][:2]
+        
+        # Dynamic competitive positioning
+        positioning_angles = [
+            "first-mover advantage in emerging market segment",
+            "superior technology stack and user experience", 
+            "unique data advantages and network effects",
+            "vertically integrated solution with cost advantages",
+            "platform approach enabling ecosystem growth"
+        ]
+        
+        competitive_angle = random.choice(positioning_angles)
+        
+        # Stage-specific financial modeling
+        financial_models = {
+            "idea": {"focus": "proof of concept and initial validation", "timeframe": "12-18 months"},
+            "pre-seed": {"focus": "product-market fit and early traction", "timeframe": "18-30 months"},
+            "seed": {"focus": "scaling operations and market expansion", "timeframe": "36 months"},
+            "series-a": {"focus": "rapid growth and market leadership", "timeframe": "48 months"},
+            "series-b": {"focus": "category dominance and profitability", "timeframe": "60 months"},
+            "later-stage": {"focus": "market consolidation and exit strategy", "timeframe": "72+ months"}
+        }
+        
+        financial_context = financial_models.get(pitch_request.funding_stage, financial_models["seed"])
+
+        prompt = f"""
+        You are a seasoned startup advisor with deep expertise in {detected_industry} companies, known for your {approach["style"]} methodology. 
+        You've guided 50+ companies through successful funding rounds, with particular strength in {approach["emphasis"]}.
+        
+        Create a comprehensive, investor-ready 10-slide pitch deck with the following structure. Use a {approach["style"]} approach:
 
         **SLIDE 1: TITLE & VISION**
-        - Company name suggestion and tagline
-        - Clear vision statement
-        - Founder introduction placeholder
+        - Compelling company name suggestion that reflects the {detected_industry} focus
+        - Clear value proposition emphasizing {approach["emphasis"]}
+        - Vision statement aligned with {pitch_request.target_audience} investment thesis
 
         **SLIDE 2: PROBLEM**
-        - Market pain points with statistics
-        - Current inadequate solutions
-        - Cost of the problem
+        - Frame problem through {detected_industry} industry lens
+        - Quantify market inefficiencies with specific data points
+        - Highlight why existing solutions fail at {approach["emphasis"]}
+        - Create urgency around timing and market readiness
 
         **SLIDE 3: SOLUTION**
-        - Your unique approach
-        - Key features and benefits
-        - Technology differentiators
+        - Present solution architecture emphasizing {competitive_angle}
+        - Detail key technology components and innovation
+        - Explain why your approach enables superior {approach["emphasis"]}
+        - Address scalability from day one
 
         **SLIDE 4: PRODUCT DEMO**
-        - Core product walkthrough
-        - User experience highlights
-        - Technical architecture overview
+        - Core user journey optimized for {primary_metric}
+        - Technical architecture highlighting competitive advantages
+        - Integration capabilities and ecosystem positioning
+        - Mobile and platform strategy
 
         **SLIDE 5: MARKET SIZE**
-        - TAM, SAM, SOM analysis
-        - Market trends and drivers
-        - Growth projections
+        - TAM/SAM/SOM analysis specific to {detected_industry}
+        - Market segmentation with clear beachhead strategy
+        - Growth drivers supporting {approach["emphasis"]}
+        - Regulatory environment and market timing factors
 
         **SLIDE 6: BUSINESS MODEL**
-        - Revenue streams
-        - Pricing strategy
-        - Unit economics
+        - Revenue model optimized for {pitch_request.funding_stage} stage growth
+        - Multiple revenue streams with {primary_metric} as primary driver
+        - Unit economics showing path to {financial_context["focus"]}
+        - Pricing strategy and margin expansion opportunities
 
         **SLIDE 7: COMPETITION**
-        - Competitive landscape
-        - Positioning matrix
-        - Competitive advantages
+        - Competitive landscape with {competitive_angle} positioning
+        - Feature comparison highlighting unique advantages
+        - Barriers to entry and sustainable competitive moats
+        - Partnership and acquisition landscape
 
         **SLIDE 8: TRACTION**
-        - Key metrics and milestones
-        - Customer testimonials
-        - Growth trajectory
+        - Key performance metrics focused on {primary_metric}
+        - Secondary metrics: {', '.join(secondary_metrics)}
+        - Customer validation and early adoption signals
+        - Strategic partnerships and market validation
 
         **SLIDE 9: FINANCIAL PROJECTIONS**
-        - 3-year revenue forecast
-        - Key assumptions
-        - Path to profitability
+        - {financial_context["timeframe"]} forecast focused on {financial_context["focus"]}
+        - Revenue model assumptions and growth drivers
+        - Key milestone timeline and scaling plan
+        - Path to profitability and exit opportunity sizing
 
         **SLIDE 10: FUNDING & USE OF FUNDS**
-        - Funding requirements
-        - Detailed use of funds
-        - Key milestones to achieve
+        - Funding requirement aligned with {financial_context["focus"]}
+        - Detailed allocation prioritizing {approach["emphasis"]}
+        - Key hires and capability building plan
+        - Milestone-driven roadmap to next funding round
 
-        Startup Idea: {idea}
-        Target Audience: {pitch_request.target_audience}
-        Industry: {pitch_request.industry or "Not specified"}
-        Funding Stage: {pitch_request.funding_stage}
+        **Startup Idea:** {idea}
+        **Target Audience:** {pitch_request.target_audience}
+        **Industry:** {detected_industry}
+        **Funding Stage:** {pitch_request.funding_stage}
+        **Approach:** {approach["style"]} with focus on {approach["emphasis"]}
 
-        Make it investor-ready with specific numbers, market insights, and compelling narrative.
+        Make it comprehensive and investor-ready with specific numbers, market insights, and compelling narrative.
+        Focus on demonstrating {competitive_angle} and strong {primary_metric} potential.
         """
 
         response = client.chat.completions.create(
@@ -404,12 +650,15 @@ async def generate_detailed_pitch(pitch_request: PitchRequest):
             messages=[
                 {
                     "role": "system", 
-                    "content": "You are a startup advisor who has successfully helped companies raise over $100M in funding. You understand what makes investors excited."
+                    "content": f"You are a top-tier startup advisor with deep {detected_industry} expertise, using a {approach['style']} methodology. You understand what makes {pitch_request.target_audience} excited about {approach['emphasis']} in {pitch_request.funding_stage} companies. You've successfully helped companies raise over $100M."
                 },
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=3000,
-            temperature=0.7
+            max_tokens=3500,  # Increased for detailed content
+            temperature=0.85, # Higher creativity for detailed decks
+            top_p=0.9,
+            frequency_penalty=0.4,  # Stronger repetition reduction
+            presence_penalty=0.3    # Encourage diverse topics
         )
 
         result = response.choices[0].message.content

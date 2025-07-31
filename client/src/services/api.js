@@ -8,7 +8,11 @@ export const generatePitchDeck = async (idea, options = {}) => {
       idea: idea,
       target_audience: options.target_audience || "general investors",
       industry: options.industry || null,
-      funding_stage: options.funding_stage || "seed"
+      funding_stage: options.funding_stage || "seed",
+      presentation_style: options.presentation_style || "balanced",
+      business_model: options.business_model || null,
+      competitor_context: options.competitor_context || null,
+      request_id: options.request_id || Date.now().toString()
     };
 
     console.log('Sending request to:', `${API_BASE_URL}/generate`);
@@ -49,7 +53,11 @@ export const generateDetailedPitchDeck = async (idea, options = {}) => {
       idea: idea,
       target_audience: options.target_audience || "general investors",
       industry: options.industry || null,
-      funding_stage: options.funding_stage || "seed"
+      funding_stage: options.funding_stage || "seed",
+      presentation_style: options.presentation_style || "balanced",
+      business_model: options.business_model || null,
+      competitor_context: options.competitor_context || null,
+      request_id: options.request_id || Date.now().toString()
     };
 
     console.log('Sending detailed request to:', `${API_BASE_URL}/generate-detailed`);
