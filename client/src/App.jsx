@@ -2,25 +2,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import { generatePitchDeck, generateDetailedPitchDeck, checkServerHealth, validateStartupIdea } from './services/api';
 import LandingSection from './components/LandingSection';
 import LoadingSpinner from './components/LoadingSpinner';
-import { downloadPDF } from './utils/pdfGenerator';
+import LogoGenerator from './components/LogoGenerator';
+import { downloadPDF, validateContentForPDF, previewPDFStructure } from './utils/pdfGenerator';
 
-const App = () => {
-  const [idea, setIdea] = useState('');
-  const [output, setOutput] = useState('');
+function App() {
+  // Tab management
+  const [activeTab, setActiveTab] = useState('pitch-deck');
+  
+  // Pitch deck states
+  const [pitchDeck, setPitchDeck] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [output, setOutput] = useState('');
   const [serverStatus, setServerStatus] = useState('checking');
+  const [businessIdea, setBusinessIdea] = useState('');
+  const [businessModel, setBusinessModel] = useState('B2C');
+  const [industry, setIndustry] = useState('Technology');
+  const [targetMarket, setTargetMarket] = useState('Young Adults (18-30)');
+  const [fundingStage, setFundingStage] = useState('Pre-Seed');
+  const [useDetailed, setUseDetailed] = useState(false);
+  const [ideaValidation, setIdeaValidation] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
   const [generateDetailed, setGenerateDetailed] = useState(false);
   const [targetAudience, setTargetAudience] = useState('general investors');
-  const [industry, setIndustry] = useState('');
-  const [fundingStage, setFundingStage] = useState('seed');
   const [showLanding, setShowLanding] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [presentationStyle, setPresentationStyle] = useState('balanced');
-  const [businessModel, setBusinessModel] = useState('');
   const [competitorContext, setCompetitorContext] = useState('');
   const [loadingMessage, setLoadingMessage] = useState('');
   const [pdfDownloading, setPdfDownloading] = useState(false);
-
+  
+  // Refs
+  const containerRef = useRef(null);
   const formRef = useRef(null);
 
   // Sample ideas for inspiration
@@ -49,7 +62,7 @@ const App = () => {
 
   const handleGenerate = async () => {
     // Validate idea
-    const validation = validateStartupIdea(idea);
+    const validation = validateStartupIdea(businessIdea);
     if (!validation.isValid) {
       setOutput(`❌ ${validation.error}`);
       return;
@@ -70,9 +83,13 @@ const App = () => {
         presentation_style: presentationStyle,
         business_model: businessModel || null,
         competitor_context: competitorContext || null,
-        // Add timestamp to ensure unique requests
-        request_id: Date.now().toString()
+        // Add timestamp and random element to ensure unique requests
+        request_id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
+
+      console.log("🔍 DEBUG: Generation options:", options);
+      console.log("🎯 DEBUG: Idea:", businessIdea);
+      console.log("📊 DEBUG: Generate detailed:", generateDetailed);
 
       // Update loading message during process
       setTimeout(() => {
@@ -91,8 +108,8 @@ const App = () => {
       }, 6000);
 
       const result = generateDetailed 
-        ? await generateDetailedPitchDeck(idea, options)
-        : await generatePitchDeck(idea, options);
+        ? await generateDetailedPitchDeck(businessIdea, options)
+        : await generatePitchDeck(businessIdea, options);
       
       console.log("Pitch deck result:", result);
       setOutput(result);
@@ -115,7 +132,7 @@ const App = () => {
   };
 
   const handleSampleClick = (sampleIdea) => {
-    setIdea(sampleIdea);
+    setBusinessIdea(sampleIdea);
     setShowLanding(false);
     // Scroll to form
     setTimeout(() => {
@@ -124,7 +141,7 @@ const App = () => {
   };
 
   const handleClearAll = () => {
-    setIdea('');
+    setBusinessIdea('');
     setOutput('');
     setIndustry('');
     setTargetAudience('general investors');
@@ -180,8 +197,10 @@ const App = () => {
         presentation_style: newStyle,
         business_model: businessModel || null,
         competitor_context: competitorContext || null,
-        request_id: `${Date.now()}_${newStyle}`
+        request_id: `${Date.now()}_${newStyle}_${Math.random().toString(36).substr(2, 9)}`
       };
+
+      console.log("🔄 DEBUG: Regeneration options:", options);
 
       // Update loading message
       setTimeout(() => {
@@ -191,8 +210,8 @@ const App = () => {
       }, 2000);
 
       const result = generateDetailed 
-        ? await generateDetailedPitchDeck(idea, options)
-        : await generatePitchDeck(idea, options);
+        ? await generateDetailedPitchDeck(businessIdea, options)
+        : await generatePitchDeck(businessIdea, options);
       
       setOutput(result);
     } catch (err) {
@@ -210,17 +229,69 @@ const App = () => {
     
     setPdfDownloading(true);
     try {
-      const success = downloadPDF(output, `pitch-deck-${Date.now()}.pdf`);
+      // Validate content before generating PDF
+      const validation = validateContentForPDF(output);
+      
+      if (!validation.isValid) {
+        const errorMessage = `Cannot generate PDF: ${validation.issues.join(', ')}`;
+        console.error('PDF validation failed:', validation);
+        alert(errorMessage);
+        return;
+      }
+      
+      // Show validation warnings if any
+      if (validation.issues.length > 0) {
+        const warningMessage = `PDF Warning: ${validation.issues.join(', ')}`;
+        console.warn('PDF validation warnings:', validation);
+        
+        const proceed = window.confirm(
+          `${warningMessage}\n\nDo you want to continue with PDF generation?`
+        );
+        if (!proceed) return;
+      }
+      
+      // Preview structure for debugging
+      const structure = previewPDFStructure(output);
+      console.log('PDF Structure Preview:', structure);
+      
+      // Generate filename with more context
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      const ideaSlug = businessIdea.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 30);
+      const filename = `cofoundr-${ideaSlug}-${timestamp}.pdf`;
+      
+      const success = downloadPDF(output, filename);
+      
       if (success) {
-        // Show success message briefly
+        // Show success message with structure info
         setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
+        setTimeout(() => setCopySuccess(false), 3000);
+        
+        // Optional: Show PDF info to user
+        if (structure.totalSlides > 0) {
+          console.log(`PDF generated successfully: ${structure.totalSlides} slides, ~${structure.estimatedPages} pages`);
+        }
       } else {
-        alert('Failed to download PDF. Please try again.');
+        throw new Error('PDF generation returned false');
       }
     } catch (error) {
       console.error('PDF download error:', error);
-      alert('Failed to download PDF. Please try again.');
+      console.error('Content length:', output?.length);
+      console.error('Content preview:', output?.substring(0, 300));
+      
+      // More specific error messages
+      let errorMessage = 'Failed to download PDF. ';
+      
+      if (error.message.includes('Invalid pitch content')) {
+        errorMessage += 'The pitch content appears to be invalid. Please try regenerating the pitch deck.';
+      } else if (error.message.includes('too short')) {
+        errorMessage += 'The pitch content is too short. Please generate a more detailed pitch deck.';
+      } else if (error.message.includes('jsPDF')) {
+        errorMessage += 'PDF library error. Please try again or contact support.';
+      } else {
+        errorMessage += 'Please try again. If the problem persists, try regenerating the pitch deck.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setPdfDownloading(false);
     }
@@ -273,7 +344,7 @@ const App = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Cofoundr AI</h1>
-                <p className="text-sm text-gray-600">AI-Powered Pitch Deck Generator</p>
+                <p className="text-sm text-gray-600">AI-Powered Pitch Deck & Branding Generator</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -294,6 +365,36 @@ const App = () => {
             </div>
           </div>
         </div>
+        
+        {/* Tab Navigation */}
+        {!showLanding && (
+          <div className="border-t border-gray-200">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('pitch-deck')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'pitch-deck'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  📊 Pitch Deck Generator
+                </button>
+                <button
+                  onClick={() => setActiveTab('logo-branding')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'logo-branding'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  🎨 Logo & Branding
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -324,11 +425,14 @@ const App = () => {
         )}
 
         {!showLanding && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-slideInRight">
-            
-            {/* Left Column - Input */}
-            <div className="space-y-6" ref={formRef}>
-              <div className="bg-white rounded-xl shadow-lg p-6 card-shadow">
+          <div className="animate-slideInRight">
+            {/* Pitch Deck Tab Content */}
+            {activeTab === 'pitch-deck' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Left Column - Input */}
+                <div className="space-y-6" ref={formRef}>
+                  <div className="bg-white rounded-xl shadow-lg p-6 card-shadow">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   ✨ Describe Your Startup Idea
                 </h2>
@@ -341,16 +445,16 @@ const App = () => {
                     <textarea
                       className="w-full p-4 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 form-input"
                       placeholder="Describe your startup idea in detail... (e.g., A mobile app that connects dog owners with local dog walkers using geolocation and real-time scheduling)"
-                      value={idea}
-                      onChange={(e) => setIdea(e.target.value)}
+                      value={businessIdea}
+                      onChange={(e) => setBusinessIdea(e.target.value)}
                       rows={5}
                     />
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-500">
                         Be specific about the problem you're solving and your target market
                       </p>
-                      <span className={`text-xs ${idea.length < 10 ? 'text-red-500' : idea.length > 500 ? 'text-yellow-500' : 'text-green-500'}`}>
-                        {idea.length}/1000
+                      <span className={`text-xs ${businessIdea.length < 10 ? 'text-red-500' : businessIdea.length > 500 ? 'text-yellow-500' : 'text-green-500'}`}>
+                        {businessIdea.length}/1000
                       </span>
                     </div>
                   </div>
@@ -670,7 +774,20 @@ const App = () => {
                       </li>
                     </ul>
               </div>
-            </div>
+                </div>
+              </div>
+              )}
+              
+              {/* Logo & Branding Tab Content */}
+              {activeTab === 'logo-branding' && (
+                <div className="w-full">
+                  <LogoGenerator 
+                    businessIdea={businessIdea}
+                    industry={industry}
+                    businessModel={businessModel}
+                  />
+                </div>
+              )}
           </div>
         )}
       </div>

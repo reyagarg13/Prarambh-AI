@@ -21,14 +21,14 @@ const LandingSection = ({ onGetStarted }) => {
       description: "Structured presentations that follow proven frameworks used by successful startups and VCs."
     },
     {
-      icon: "⚡",
-      title: "Instant Generation",
-      description: "Get your pitch deck in seconds, not days. Perfect for rapid iteration and testing ideas."
+      icon: "🎨",
+      title: "Logo & Branding",
+      description: "AI generates logos, brand colors, and typography based on your startup's theme and industry."
     },
     {
-      icon: "🎯",
-      title: "Customizable Output",
-      description: "Choose between quick 5-slide overviews or comprehensive 10-slide detailed presentations."
+      icon: "⚡",
+      title: "Instant Generation",
+      description: "Get your pitch deck and branding assets in seconds, not days. Perfect for rapid iteration."
     }
   ];
 
@@ -37,11 +37,11 @@ const LandingSection = ({ onGetStarted }) => {
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
           Transform Your Startup Ideas Into 
-          <span className="gradient-text"> Professional Pitch Decks</span>
+          <span className="gradient-text"> Professional Pitch Decks & Branding</span>
         </h2>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          Whether you're preparing for investors, accelerators, or just want to structure your thoughts, 
-          our AI creates compelling pitch decks that tell your story effectively.
+          Whether you're preparing for investors, accelerators, or building your brand identity, 
+          our AI creates compelling pitch decks and branding assets that tell your story effectively.
         </p>
       </div>
 
