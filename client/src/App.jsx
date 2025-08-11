@@ -344,7 +344,7 @@ function App() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Cofoundr AI</h1>
-                <p className="text-sm text-gray-600">AI-Powered Pitch Deck & Branding Generator</p>
+                <p className="text-sm text-gray-600">Complete AI Co-founder: Pitch Decks • Logos • Branding • Marketing Copy</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -389,7 +389,7 @@ function App() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  🎨 Logo & Branding
+                  🎨 Logo & Brand Suite
                 </button>
               </div>
             </div>

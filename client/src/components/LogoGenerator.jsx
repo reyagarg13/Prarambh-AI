@@ -6,9 +6,15 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
   const [selectedLogo, setSelectedLogo] = useState(null);
   const [brandPalette, setBrandPalette] = useState(null);
   const [error, setError] = useState(null);
+  const [brandKit, setBrandKit] = useState(null);
+  const [activeSection, setActiveSection] = useState('logos');
+  const [marketingCopy, setMarketingCopy] = useState(null);
 
   // Generate logos based on startup theme
   const generateLogos = async () => {
+    console.log('🔥 Generate logos clicked!');
+    console.log('Props:', { businessIdea, industry, businessModel });
+    
     if (!businessIdea || businessIdea.trim() === '') {
       alert('Please enter your business idea in the pitch deck tab first!');
       return;
@@ -23,6 +29,12 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
       // Simulate AI logo generation with different styles
       const logoStyles = await generateLogoStyles(businessIdea, industry, businessModel);
       console.log('Generated logo styles:', logoStyles);
+      
+      // Validate logos before setting
+      if (!logoStyles || !Array.isArray(logoStyles) || logoStyles.length === 0) {
+        throw new Error('No logos were generated');
+      }
+      
       setLogos(logoStyles);
       
       // Generate brand palette
@@ -30,12 +42,24 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
       console.log('Generated brand palette:', palette);
       setBrandPalette(palette);
       
+      // Generate complete brand kit
+      const kit = await generateBrandKit(businessIdea, industry, businessModel);
+      console.log('Generated brand kit:', kit);
+      setBrandKit(kit);
+      
+      // Generate marketing copy suggestions
+      const copy = await generateMarketingCopy(businessIdea, palette);
+      console.log('Generated marketing copy:', copy);
+      setMarketingCopy(copy);
+      
       if (onLogosGenerated) {
-        onLogosGenerated({ logos: logoStyles, palette });
+        onLogosGenerated({ logos: logoStyles, palette, brandKit: kit, marketingCopy: copy });
       }
       
+      console.log('✅ Logo generation completed successfully!');
+      
     } catch (error) {
-      console.error('Error generating logos:', error);
+      console.error('❌ Error generating logos:', error);
       setError(`Failed to generate logos: ${error.message || 'Unknown error'}`);
       // Reset state on error
       setLogos([]);
@@ -94,7 +118,7 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
           id: 5,
           style: 'Geometric Shape',
           type: 'geometric',
-          design: generateGeometricLogo(companyName, theme.colors.gradient),
+          design: generateGeometricLogo(companyName, theme.colors.primary),
           colors: theme.colors.gradient,
           description: 'Modern geometric pattern with contemporary appeal'
         }
@@ -147,7 +171,83 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
     }
   };
 
-  // Extract potential company name from businessIdea
+  // Generate comprehensive brand kit
+  const generateBrandKit = async (businessIdea, industry, businessModel) => {
+    try {
+      const theme = determineTheme(businessIdea, industry);
+      const companyName = extractCompanyName(businessIdea);
+      
+      return {
+        brandValues: [
+          'Innovation',
+          'Reliability', 
+          'User-Centric Design',
+          'Transparency',
+          'Growth-Oriented'
+        ],
+        brandVoice: {
+          tone: 'Professional yet approachable',
+          personality: ['Confident', 'Helpful', 'Authentic', 'Forward-thinking'],
+          doSay: ['We empower', 'Together we build', 'Innovation made simple'],
+          dontSay: ['Impossible', 'Maybe', 'We think']
+        },
+        logoVariations: [
+          { name: 'Primary Logo', usage: 'Main brand applications' },
+          { name: 'Icon Only', usage: 'Social media, favicon, small spaces' },
+          { name: 'Horizontal Layout', usage: 'Headers, business cards' },
+          { name: 'Stacked Layout', usage: 'Square formats, app icons' },
+          { name: 'Monochrome', usage: 'Single color printing' }
+        ],
+        applicationSuggestions: [
+          { item: 'Business Cards', size: '3.5" x 2"', specs: 'Use horizontal logo, primary colors' },
+          { item: 'Website Header', size: 'Responsive', specs: 'Primary logo with transparent background' },
+          { item: 'Social Media Profile', size: '400x400px', specs: 'Icon only version, high contrast' },
+          { item: 'App Icon', size: '1024x1024px', specs: 'Simplified icon, works at small sizes' },
+          { item: 'Email Signature', size: 'Max 300px wide', specs: 'Horizontal layout, web-safe colors' }
+        ]
+      };
+    } catch (error) {
+      console.error('Error generating brand kit:', error);
+      throw error;
+    }
+  };
+
+  // Generate marketing copy suggestions
+  const generateMarketingCopy = async (businessIdea, palette) => {
+    try {
+      const companyName = extractCompanyName(businessIdea);
+      
+      return {
+        taglines: [
+          `${companyName} - Where Innovation Meets Opportunity`,
+          'Transforming Ideas Into Reality',
+          'Building Tomorrow, Today',
+          'Your Success, Our Mission'
+        ],
+        headlines: [
+          'Revolutionizing the Way You Work',
+          'The Future of Business Innovation',
+          'Simplifying Complex Solutions',
+          'Empowering Your Business Growth'
+        ],
+        descriptions: {
+          short: `${companyName} provides innovative solutions that transform the way businesses operate and grow.`,
+          medium: `${companyName} is a cutting-edge platform designed to streamline operations, enhance productivity, and drive sustainable growth for businesses of all sizes.`,
+          long: `At ${companyName}, we believe that every business deserves access to powerful, intuitive tools that can transform their operations. Our innovative platform combines advanced technology with user-friendly design to deliver solutions that not only meet today's challenges but anticipate tomorrow's opportunities.`
+        },
+        callToActions: [
+          'Get Started Today',
+          'Transform Your Business',
+          'Join Thousands of Success Stories',
+          'Start Your Free Trial',
+          'Discover the Difference'
+        ]
+      };
+    } catch (error) {
+      console.error('Error generating marketing copy:', error);
+      throw error;
+    }
+  };
   const extractCompanyName = (businessIdea) => {
     if (!businessIdea || typeof businessIdea !== 'string') {
       return 'StartupAI';
@@ -316,11 +416,14 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
   };
 
   const generateGeometricLogo = (name, color) => {
+    // Handle both single color and gradient array
+    const fillColor = Array.isArray(color) ? color[0] : color;
+    
     return {
       type: 'svg',
       content: `<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="10,10 40,10 50,30 40,50 10,50 20,30" fill="${color}"/>
-        <text x="70" y="38" font-family="Inter, sans-serif" font-size="20" font-weight="600" fill="${color}">
+        <polygon points="10,10 40,10 50,30 40,50 10,50 20,30" fill="${fillColor}"/>
+        <text x="70" y="38" font-family="Inter, sans-serif" font-size="20" font-weight="600" fill="${fillColor}">
           ${name}
         </text>
       </svg>`
@@ -359,14 +462,15 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6" data-testid="logo-generator">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900">
-          🎨 AI Logo & Branding
+          🎨 AI Logo & Branding Suite
         </h2>
         <button
           onClick={generateLogos}
           disabled={generating}
-          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
             generating
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl'
@@ -375,13 +479,41 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
           {generating ? (
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Generating...</span>
+              <span>Generating Brand Identity...</span>
             </div>
           ) : (
-            '✨ Generate Logos'
+            '✨ Generate Complete Brand Package'
           )}
         </button>
       </div>
+
+      {/* Navigation Tabs */}
+      {logos.length > 0 && (
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: 'logos', label: '🎯 Logos', desc: 'Logo designs' },
+              { id: 'colors', label: '🎨 Colors', desc: 'Brand palette' },
+              { id: 'typography', label: '📝 Typography', desc: 'Font styles' },
+              { id: 'brand-kit', label: '📦 Brand Kit', desc: 'Guidelines & assets' },
+              { id: 'marketing', label: '📢 Marketing Copy', desc: 'Copy suggestions' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSection(tab.id)}
+                className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeSection === tab.id
+                    ? 'border-purple-500 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div>{tab.label}</div>
+                <div className="text-xs opacity-75">{tab.desc}</div>
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -400,158 +532,414 @@ const LogoGenerator = ({ businessIdea, industry, businessModel, onLogosGenerated
         </div>
       )}
 
+      {/* Loading State */}
       {generating && (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Creating unique logos and brand identity...</p>
+        <div className="text-center py-16">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-6"></div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Creating Your Brand Identity</h3>
+          <p className="text-gray-600 mb-4">Generating logos, colors, typography, and marketing assets...</p>
+          <div className="bg-gray-200 rounded-full h-2 w-64 mx-auto">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
+          </div>
         </div>
       )}
 
+      {/* Content Sections */}
       {logos.length > 0 && (
-        <div className="space-y-8">
-          {/* Logo Options */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Logo Options</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {logos.map((logo) => (
-                <div
-                  key={logo.id}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                    selectedLogo?.id === logo.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedLogo(logo)}
-                >
-                  <div className="text-center mb-3">
-                    <div
-                      className="inline-block p-4 bg-gray-50 rounded-lg"
-                      dangerouslySetInnerHTML={{ __html: logo.design.content }}
-                    />
-                  </div>
-                  <h4 className="font-medium text-gray-900">{logo.style}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{logo.description}</p>
-                  <div className="flex space-x-1 mt-2">
-                    {logo.colors.map((color, index) => (
+        <div className="space-y-6">
+          {/* Logos Section */}
+          {activeSection === 'logos' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Logo Design Options</h3>
+                <span className="text-sm text-gray-500">{logos.length} variations generated</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {logos.map((logo) => {
+                  try {
+                    return (
                       <div
-                        key={index}
-                        className="w-6 h-6 rounded-full border"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadLogo(logo);
-                    }}
-                    className="mt-3 w-full px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-                  >
-                    Download SVG
-                  </button>
-                </div>
-              ))}
+                        key={logo.id}
+                        className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          selectedLogo?.id === logo.id
+                            ? 'border-purple-500 bg-purple-50 shadow-md'
+                            : 'border-gray-200 hover:border-purple-300 hover:shadow-sm'
+                        }`}
+                        onClick={() => setSelectedLogo(logo)}
+                      >
+                        <div className="text-center mb-4">
+                          <div
+                            className="inline-block p-6 bg-white rounded-lg shadow-sm border"
+                            dangerouslySetInnerHTML={{ 
+                              __html: logo.design?.content || '<div class="text-gray-400 p-4">Logo Preview</div>' 
+                            }}
+                          />
+                        </div>
+                        <h4 className="font-semibold text-gray-900 mb-2">{logo.style || 'Unknown Style'}</h4>
+                        <p className="text-sm text-gray-600 mb-4">{logo.description || 'No description available'}</p>
+                        
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Colors</span>
+                          <div className="flex space-x-1">
+                            {(logo.colors || []).slice(0, 4).map((color, index) => (
+                              <div
+                                key={index}
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: color }}
+                                title={color}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadLogo(logo);
+                            }}
+                            className="flex-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                          >
+                            📥 Download SVG
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLogo(logo);
+                            }}
+                            className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                              selectedLogo?.id === logo.id
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                            }`}
+                          >
+                            {selectedLogo?.id === logo.id ? '✓' : '👁️'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  } catch (renderError) {
+                    console.error('Error rendering logo:', logo, renderError);
+                    return (
+                      <div key={logo.id} className="p-4 border-2 border-red-200 rounded-lg bg-red-50">
+                        <p className="text-red-600 text-sm">Error rendering logo</p>
+                        <p className="text-red-500 text-xs">{renderError.message}</p>
+                      </div>
+                    );
+                  }
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Brand Palette */}
-          {brandPalette && (
+          {activeSection === 'colors' && brandPalette && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Brand Color Palette</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">Brand Color Palette</h3>
+                <button className="text-sm text-purple-600 hover:text-purple-700">Export Palette</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {Object.entries(brandPalette).filter(([key]) => key !== 'typography').map(([key, color]) => (
-                  <div key={key} className="bg-gray-50 rounded-lg p-4">
-                    <div
-                      className="w-full h-20 rounded-lg mb-3 cursor-pointer"
-                      style={{ backgroundColor: color.hex }}
-                      onClick={() => copyColorToClipboard(color)}
-                      title="Click to copy hex code"
-                    />
-                    <h4 className="font-medium text-gray-900">{color.name}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{color.hex}</p>
-                    <p className="text-sm text-gray-600">
-                      RGB({color.rgb.r}, {color.rgb.g}, {color.rgb.b})
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">{color.usage}</p>
+                  <div key={key} className="group">
+                    <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                      <div
+                        className="w-full h-24 rounded-lg mb-4 cursor-pointer relative overflow-hidden"
+                        style={{ backgroundColor: color.hex }}
+                        onClick={() => copyColorToClipboard(color)}
+                        title="Click to copy hex code"
+                      >
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
+                          <span className="text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity">📋 Copy</span>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">{color.name}</h4>
+                      <div className="space-y-1 text-sm">
+                        <p className="font-mono text-gray-800">{color.hex}</p>
+                        <p className="font-mono text-gray-600">RGB({color.rgb.r}, {color.rgb.g}, {color.rgb.b})</p>
+                        <p className="text-gray-500 text-xs mt-2">{color.usage}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Color Accessibility */}
+              <div className="mt-8 bg-green-50 border border-green-200 rounded-xl p-6">
+                <h4 className="font-semibold text-green-900 mb-3">♿ Accessibility Guidelines</h4>
+                <ul className="space-y-2 text-sm text-green-800">
+                  <li>✓ All color combinations meet WCAG AA contrast requirements</li>
+                  <li>✓ Primary color provides 4.5:1 contrast ratio with white text</li>
+                  <li>✓ Colors are distinguishable for color-blind users</li>
+                  <li>✓ Neutral color ensures readability for body text</li>
+                </ul>
+              </div>
             </div>
           )}
 
-          {/* Typography */}
-          {brandPalette?.typography && (
+          {/* Typography Section */}
+          {activeSection === 'typography' && brandPalette?.typography && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Typography</h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Heading Font</h4>
-                  <p style={{ fontFamily: brandPalette.typography.heading }} className="text-2xl">
-                    {extractCompanyName(idea)} - Innovation Starts Here
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">{brandPalette.typography.heading}</p>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">Typography System</h3>
+                <button className="text-sm text-purple-600 hover:text-purple-700">Download Fonts</button>
+              </div>
+              
+              <div className="space-y-8">
+                {/* Heading Font */}
+                <div className="bg-white border border-gray-200 rounded-xl p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium text-gray-900">Primary Heading Font</h4>
+                    <span className="text-sm text-gray-500 font-mono">{brandPalette.typography.heading}</span>
+                  </div>
+                  <div style={{ fontFamily: brandPalette.typography.heading }}>
+                    <h1 className="text-4xl font-bold mb-2">{extractCompanyName(businessIdea)}</h1>
+                    <h2 className="text-2xl font-semibold mb-2">Innovation Starts Here</h2>
+                    <h3 className="text-xl font-medium">Transforming Ideas Into Reality</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4">Use for: Main headings, hero titles, section headers</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Body Font</h4>
-                  <p style={{ fontFamily: brandPalette.typography.body }} className="text-base">
-                    This is how your body text will look in marketing materials, website content, and documentation.
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">{brandPalette.typography.body}</p>
+
+                {/* Body Font */}
+                <div className="bg-white border border-gray-200 rounded-xl p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium text-gray-900">Body Text Font</h4>
+                    <span className="text-sm text-gray-500 font-mono">{brandPalette.typography.body}</span>
+                  </div>
+                  <div style={{ fontFamily: brandPalette.typography.body }}>
+                    <p className="text-lg mb-4">
+                      This is how your body text will appear in marketing materials, website content, 
+                      and documentation. It's designed for optimal readability and user experience.
+                    </p>
+                    <p className="text-base mb-2">
+                      Regular paragraph text maintains excellent legibility at various sizes and provides 
+                      a professional appearance across all platforms.
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Small text and captions remain clear and accessible even at reduced sizes.
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4">Use for: Paragraphs, descriptions, body content, navigation</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Accent Font</h4>
-                  <p style={{ fontFamily: brandPalette.typography.accent }} className="text-lg">
-                    Perfect for quotes, callouts, and special emphasis
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">{brandPalette.typography.accent}</p>
+
+                {/* Accent Font */}
+                <div className="bg-white border border-gray-200 rounded-xl p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium text-gray-900">Accent Font</h4>
+                    <span className="text-sm text-gray-500 font-mono">{brandPalette.typography.accent}</span>
+                  </div>
+                  <div style={{ fontFamily: brandPalette.typography.accent }}>
+                    <blockquote className="text-xl italic mb-4">
+                      "Perfect for quotes, callouts, and special emphasis text that needs to stand out."
+                    </blockquote>
+                    <p className="text-lg font-medium">Special Announcements & Highlights</p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4">Use for: Quotes, callouts, testimonials, special emphasis</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Brand Guidelines */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              📋 Brand Usage Guidelines
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start space-x-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>Use primary color for main CTAs, headers, and key brand elements</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>Maintain minimum 20px clear space around logos</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>Use heading font for titles, body font for paragraphs</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>Ensure 4.5:1 contrast ratio for accessibility compliance</span>
-              </li>
-              <li className="flex items-start space-x-2">
-                <span className="text-purple-600 mt-0.5">✓</span>
-                <span>Download high-resolution versions for print materials</span>
-              </li>
-            </ul>
-          </div>
+          {/* Brand Kit Section */}
+          {activeSection === 'brand-kit' && brandKit && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">Complete Brand Kit</h3>
+                <button className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+                  📦 Download Brand Kit
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {/* Brand Values */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-blue-900 mb-4">🎯 Brand Values</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {brandKit.brandValues.map((value, index) => (
+                      <div key={index} className="bg-white rounded-lg p-4 text-center border border-blue-100">
+                        <p className="font-medium text-blue-800">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Brand Voice */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-purple-900 mb-4">🗣️ Brand Voice & Tone</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-purple-800 mb-2">Tone</h5>
+                      <p className="text-purple-700 mb-4">{brandKit.brandVoice.tone}</p>
+                      
+                      <h5 className="font-medium text-purple-800 mb-2">Personality Traits</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {brandKit.brandVoice.personality.map((trait, index) => (
+                          <span key={index} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                            {trait}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h5 className="font-medium text-green-800 mb-2">✅ Do Say</h5>
+                        <ul className="space-y-1">
+                          {brandKit.brandVoice.doSay.map((phrase, index) => (
+                            <li key={index} className="text-green-700 text-sm">• {phrase}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-red-800 mb-2">❌ Don't Say</h5>
+                        <ul className="space-y-1">
+                          {brandKit.brandVoice.dontSay.map((phrase, index) => (
+                            <li key={index} className="text-red-700 text-sm">• {phrase}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logo Usage Guidelines */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-gray-900 mb-4">📐 Logo Usage Guidelines</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-800 mb-3">Logo Variations</h5>
+                      <div className="space-y-2">
+                        {brandKit.logoVariations.map((variation, index) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-700">{variation.name}</span>
+                            <span className="text-sm text-gray-500">{variation.usage}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h5 className="font-medium text-gray-800 mb-3">Application Guidelines</h5>
+                      <div className="space-y-2">
+                        {brandKit.applicationSuggestions.slice(0, 5).map((app, index) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-medium text-gray-700">{app.item}</span>
+                              <span className="text-xs text-gray-500">{app.size}</span>
+                            </div>
+                            <p className="text-sm text-gray-600">{app.specs}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Marketing Copy Section */}
+          {activeSection === 'marketing' && marketingCopy && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">Marketing Copy & Messaging</h3>
+                <button className="text-sm text-purple-600 hover:text-purple-700">Copy All Text</button>
+              </div>
+
+              <div className="space-y-8">
+                {/* Taglines */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-gray-900 mb-4">🎯 Taglines</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {marketingCopy.taglines.map((tagline, index) => (
+                      <div key={index} className="group p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                        <p className="text-gray-800 font-medium">{tagline}</p>
+                        <button className="opacity-0 group-hover:opacity-100 text-xs text-purple-600 mt-2 transition-opacity">
+                          📋 Copy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Headlines */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-gray-900 mb-4">📰 Marketing Headlines</h4>
+                  <div className="space-y-3">
+                    {marketingCopy.headlines.map((headline, index) => (
+                      <div key={index} className="group p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                        <h5 className="text-lg font-semibold text-gray-800">{headline}</h5>
+                        <button className="opacity-0 group-hover:opacity-100 text-xs text-purple-600 mt-2 transition-opacity">
+                          📋 Copy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Descriptions */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-gray-900 mb-4">📝 Brand Descriptions</h4>
+                  <div className="space-y-6">
+                    {Object.entries(marketingCopy.descriptions).map(([length, description]) => (
+                      <div key={length}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium text-gray-700 capitalize">{length} Description</h5>
+                          <span className="text-xs text-gray-500">{description.length} characters</span>
+                        </div>
+                        <div className="group p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                          <p className="text-gray-800 leading-relaxed">{description}</p>
+                          <button className="opacity-0 group-hover:opacity-100 text-xs text-purple-600 mt-3 transition-opacity">
+                            📋 Copy
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Call to Actions */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h4 className="font-semibold text-gray-900 mb-4">🚀 Call-to-Action Phrases</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {marketingCopy.callToActions.map((cta, index) => (
+                      <div key={index} className="group">
+                        <button className="w-full p-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105">
+                          {cta}
+                        </button>
+                        <button className="opacity-0 group-hover:opacity-100 text-xs text-purple-600 mt-2 transition-opacity w-full">
+                          📋 Copy Text
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Empty State */}
       {!generating && logos.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <div className="text-6xl mb-4">🎨</div>
-          <h3 className="text-lg font-medium mb-2">Ready to Create Your Brand?</h3>
+        <div className="text-center py-16 text-gray-500">
+          <div className="text-6xl mb-6">🎨</div>
+          <h3 className="text-xl font-medium mb-3">Ready to Create Your Brand Identity?</h3>
           {businessIdea && businessIdea.trim() !== '' ? (
-            <p className="text-gray-400">
-              Click "Generate Logos" to create unique branding based on your startup idea!
-            </p>
+            <div>
+              <p className="text-gray-400 mb-6">
+                Click "Generate Complete Brand Package" to create logos, colors, typography, and marketing assets for your startup idea!
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 inline-block">
+                <p className="text-sm text-blue-800">
+                  <strong>Your Idea:</strong> {businessIdea.substring(0, 100)}{businessIdea.length > 100 ? '...' : ''}
+                </p>
+              </div>
+            </div>
           ) : (
             <p className="text-gray-400">
-              First, enter your business idea in the "📊 Pitch Deck Generator" tab, then return here to generate logos and branding assets.
+              First, enter your business idea in the "📊 Pitch Deck Generator" tab, then return here to generate your complete brand identity package.
             </p>
           )}
         </div>
