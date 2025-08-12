@@ -3,6 +3,7 @@ import { generatePitchDeck, generateDetailedPitchDeck, checkServerHealth, valida
 import LandingSection from './components/LandingSection';
 import LoadingSpinner from './components/LoadingSpinner';
 import LogoGenerator from './components/LogoGenerator';
+import WebsiteGenerator from './components/WebsiteGenerator';
 import { downloadPDF, validateContentForPDF, previewPDFStructure } from './utils/pdfGenerator';
 
 function App() {
@@ -50,13 +51,28 @@ function App() {
   // Check server health on component mount
   useEffect(() => {
     const checkHealth = async () => {
-      const health = await checkServerHealth();
-      setServerStatus(health.status === 'healthy' ? 'online' : 'offline');
+      try {
+        const health = await checkServerHealth();
+        console.log('Health check result:', health);
+        
+        if (health.status === 'healthy') {
+          setServerStatus('online');
+        } else if (health.status === 'timeout') {
+          setServerStatus('busy'); // Server is running but slow
+        } else {
+          setServerStatus('offline');
+        }
+      } catch (error) {
+        console.error('Health check failed:', error);
+        setServerStatus('offline');
+      }
     };
+    
+    // Initial health check
     checkHealth();
     
-    // Check every 30 seconds
-    const interval = setInterval(checkHealth, 30000);
+    // Check every 15 seconds (reduced frequency to avoid overwhelming server)
+    const interval = setInterval(checkHealth, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -68,9 +84,15 @@ function App() {
       return;
     }
 
+    // Check server status before proceeding
+    if (serverStatus === 'offline') {
+      setOutput('❌ Server is offline. Please make sure the server is running and try again.');
+      return;
+    }
+
     setLoading(true);
     setLoadingMessage(generateDetailed ? 
-      '� Analyzing your startup idea for detailed pitch deck...' : 
+      '🔍 Analyzing your startup idea for detailed pitch deck...' : 
       '🚀 Crafting your professional pitch deck...'
     );
     setOutput('');
@@ -112,10 +134,26 @@ function App() {
         : await generatePitchDeck(businessIdea, options);
       
       console.log("Pitch deck result:", result);
-      setOutput(result);
+      
+      // Check if result contains error message
+      if (typeof result === 'string' && result.includes('❌')) {
+        setOutput(result);
+        // Update server status if connection issues detected
+        if (result.includes('Cannot connect') || result.includes('ECONNREFUSED')) {
+          setServerStatus('offline');
+        } else if (result.includes('timeout') || result.includes('temporarily unavailable')) {
+          setServerStatus('busy');
+        }
+      } else {
+        setOutput(result);
+        // Update server status to online if request succeeded
+        if (serverStatus !== 'online') {
+          setServerStatus('online');
+        }
+      }
       
       // Analytics - track successful generation
-      if (window.gtag) {
+      if (window.gtag && result && !result.includes('❌')) {
         window.gtag('event', 'pitch_deck_generated', {
           event_category: 'engagement',
           event_label: generateDetailed ? 'detailed' : 'basic',
@@ -124,7 +162,17 @@ function App() {
       }
     } catch (err) {
       console.error("Error generating pitch deck:", err);
-      setOutput('❌ Failed to generate pitch deck. Please try again or check your connection.');
+      
+      // Provide specific error messages based on error type
+      if (err.message && err.message.includes('timeout')) {
+        setOutput('⏳ Request timed out. The server may be processing your request - please try again in a moment.');
+        setServerStatus('busy');
+      } else if (err.message && err.message.includes('connect')) {
+        setOutput('❌ Cannot connect to server. Please make sure the server is running and try again.');
+        setServerStatus('offline');
+      } else {
+        setOutput('❌ Failed to generate pitch deck. Please try again or check your connection.');
+      }
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -239,15 +287,23 @@ function App() {
         return;
       }
       
-      // Show validation warnings if any
-      if (validation.issues.length > 0) {
-        const warningMessage = `PDF Warning: ${validation.issues.join(', ')}`;
-        console.warn('PDF validation warnings:', validation);
-        
-        const proceed = window.confirm(
-          `${warningMessage}\n\nDo you want to continue with PDF generation?`
+      // Only show warnings for critical issues (score < 30)
+      if (validation.score < 30 && validation.issues.length > 0) {
+        const criticalIssues = validation.issues.filter(issue => 
+          issue.includes('too short') || 
+          issue.includes('No slides') || 
+          issue.includes('extremely difficult')
         );
-        if (!proceed) return;
+        
+        if (criticalIssues.length > 0) {
+          const warningMessage = `PDF Warning: ${criticalIssues.join(', ')}`;
+          console.warn('PDF validation warnings:', validation);
+          
+          const proceed = window.confirm(
+            `${warningMessage}\n\nDo you want to continue with PDF generation?`
+          );
+          if (!proceed) return;
+        }
       }
       
       // Preview structure for debugging
@@ -259,19 +315,23 @@ function App() {
       const ideaSlug = businessIdea.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 30);
       const filename = `cofoundr-${ideaSlug}-${timestamp}.pdf`;
       
-      const success = downloadPDF(output, filename);
-      
-      if (success) {
-        // Show success message with structure info
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 3000);
+      try {
+        const success = downloadPDF(output, { filename });
         
-        // Optional: Show PDF info to user
-        if (structure.totalSlides > 0) {
-          console.log(`PDF generated successfully: ${structure.totalSlides} slides, ~${structure.estimatedPages} pages`);
+        if (success) {
+          // Show success message with structure info
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 3000);
+          
+          // Optional: Show PDF info to user
+          if (structure.totalSlides > 0) {
+            console.log(`PDF generated successfully: ${structure.totalSlides} slides, ~${structure.estimatedPages} pages`);
+          }
+        } else {
+          throw new Error('PDF generation returned false');
         }
-      } else {
-        throw new Error('PDF generation returned false');
+      } catch (pdfError) {
+        throw new Error(pdfError.message || 'PDF generation failed');
       }
     } catch (error) {
       console.error('PDF download error:', error);
@@ -314,6 +374,7 @@ function App() {
     switch (serverStatus) {
       case 'online': return 'text-green-600';
       case 'offline': return 'text-red-600';
+      case 'busy': return 'text-yellow-600';
       default: return 'text-yellow-600';
     }
   };
@@ -322,7 +383,18 @@ function App() {
     switch (serverStatus) {
       case 'online': return '🟢';
       case 'offline': return '🔴';
+      case 'busy': return '🟡';
       default: return '🟡';
+    }
+  };
+
+  const getServerStatusText = () => {
+    switch (serverStatus) {
+      case 'online': return 'Server online';
+      case 'offline': return 'Server offline';
+      case 'busy': return 'Server busy';
+      case 'checking': return 'Checking...';
+      default: return 'Unknown status';
     }
   };
 
@@ -344,15 +416,20 @@ function App() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Cofoundr AI</h1>
-                <p className="text-sm text-gray-600">Complete AI Co-founder: Pitch Decks • Logos • Branding • Marketing Copy</p>
+                <p className="text-sm text-gray-600">Complete AI Co-founder: Pitch Decks • Logos • Branding • Marketing Copy • Websites</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm">
                 <span>{getServerStatusIcon()}</span>
                 <span className={getServerStatusColor()}>
-                  {serverStatus === 'checking' ? 'Checking...' : `Server ${serverStatus}`}
+                  {getServerStatusText()}
                 </span>
+                {serverStatus === 'online' && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                    Mock Mode
+                  </span>
+                )}
               </div>
               {!showLanding && (
                 <button
@@ -390,6 +467,16 @@ function App() {
                   }`}
                 >
                   🎨 Logo & Brand Suite
+                </button>
+                <button
+                  onClick={() => setActiveTab('website-generator')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'website-generator'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  🌐 Website Generator
                 </button>
               </div>
             </div>
@@ -584,10 +671,12 @@ function App() {
                   <div className="flex space-x-3">
                     <button
                       onClick={handleGenerate}
-                      disabled={loading || serverStatus === 'offline'}
+                      disabled={loading || (serverStatus !== 'online' && serverStatus !== 'busy')}
                       className={`flex-1 py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 btn-hover-scale ${
-                        loading || serverStatus === 'offline'
+                        loading || (serverStatus !== 'online' && serverStatus !== 'busy')
                           ? 'bg-gray-400 cursor-not-allowed' 
+                          : serverStatus === 'busy'
+                          ? 'bg-yellow-500 hover:bg-yellow-600 shadow-lg hover:shadow-xl'
                           : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
                       }`}
                     >
@@ -596,6 +685,8 @@ function App() {
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           <span>Generating...</span>
                         </div>
+                      ) : serverStatus === 'busy' ? (
+                        `⏳ Generate ${generateDetailed ? 'Detailed ' : ''}Pitch Deck (Server Busy)`
                       ) : (
                         `🚀 Generate ${generateDetailed ? 'Detailed ' : ''}Pitch Deck`
                       )}
@@ -749,30 +840,42 @@ function App() {
               {/* Tips */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                                        💡 Pro Tips for Better Results
-                    </h3>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-600 mt-0.5">✓</span>
-                        <span>Be specific about your target market and the problem you're solving</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-600 mt-0.5">✓</span>
-                        <span>Choose a presentation style that matches your audience preferences</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-600 mt-0.5">✓</span>
-                        <span>Mention competitors to get better positioning and differentiation</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-600 mt-0.5">✓</span>
-                        <span>Select your business model for more targeted revenue strategies</span>
-                      </li>
-                      <li className="flex items-start space-x-2">
-                        <span className="text-green-600 mt-0.5">✓</span>
-                        <span>Try different settings to get varied perspectives on your idea</span>
-                      </li>
-                    </ul>
+                  💡 Pro Tips for Better Results
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Be specific about your target market and the problem you're solving</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Choose a presentation style that matches your audience preferences</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Mention competitors to get better positioning and differentiation</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Select your business model for more targeted revenue strategies</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <span className="text-green-600 mt-0.5">✓</span>
+                    <span>Try different settings to get varied perspectives on your idea</span>
+                  </li>
+                </ul>
+                
+                {serverStatus === 'online' && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-blue-600">ℹ️</span>
+                      <span className="text-sm font-medium text-blue-800">Demo Mode Active</span>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      The server is running in mock mode with sample data. Your generated pitch decks will be realistic examples based on your input, but won't use live AI APIs. This ensures fast responses while you explore the platform!
+                    </p>
+                  </div>
+                )}
               </div>
                 </div>
               </div>
@@ -785,6 +888,20 @@ function App() {
                     businessIdea={businessIdea}
                     industry={industry}
                     businessModel={businessModel}
+                  />
+                </div>
+              )}
+              
+              {/* Website Generator Tab Content */}
+              {activeTab === 'website-generator' && (
+                <div className="w-full">
+                  <WebsiteGenerator 
+                    businessIdea={businessIdea}
+                    industry={industry}
+                    businessModel={businessModel}
+                    onWebsiteGenerated={(data) => {
+                      console.log('Website generated:', data);
+                    }}
                   />
                 </div>
               )}
